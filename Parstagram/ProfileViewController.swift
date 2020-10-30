@@ -1,40 +1,73 @@
 //
-//  CameraViewController.swift
+//  ProfileViewController.swift
 //  Parstagram
 //
-//  Created by Evelyn Hasama on 10/15/20.
+//  Created by Evelyn Hasama on 10/29/20.
 //
 
 import UIKit
 import AlamofireImage
 import Parse
 
-class CameraViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+class ProfileViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
 
+    @IBOutlet weak var nameLabel: UILabel!
     @IBOutlet weak var imageView: UIImageView!
     
-    @IBOutlet weak var commentField: UITextField!
+    var profiles = [PFObject]()
     
     override func viewDidLoad() {
         super.viewDidLoad()
-
+        
+        nameLabel.text = PFUser.current()?["username"] as? String
+        
+        let query = PFQuery(className:"Profiles")
+        query.whereKey("user", equalTo: PFUser.current())
+        query.findObjectsInBackground(block: { (userprofiles, error) in
+            if userprofiles != nil {
+                print("hi")
+                self.profiles = userprofiles!
+                if self.profiles.count > 0 {
+                    self.loadImage()
+                }
+            } else {
+                print("error")
+            }
+        })
+                
         // Do any additional setup after loading the view.
     }
     
-    @IBAction func onSubmitButton(_ sender: Any) {
-        let post = PFObject(className: "Post")
+
+    func loadImage() {
+        let profile = profiles[0]
+        if profile["picture"] == nil {
+            print("no photo")
+        } else {
+            print("")
+            let imageFile = profile["picture"] as! PFFileObject
+            let urlString = imageFile.url!
+            let url = URL(string: urlString)!
+            imageView.af_setImage(withURL: url)
+        }
+
+    }
+    
+    
+
+    @IBAction func onSaveButton(_ sender: Any) {
+        let profile = PFObject(className: "Profiles")
         
-        post["caption"] = commentField.text!
-        post["author"] = PFUser.current()!
+        profile["user"] = PFUser.current()!
         
         
         let imageData = imageView.image!.pngData()
         let file = PFFileObject(data: imageData!)
         
-        post["image"] = file
+        profile["picture"] = file
         
         
-        post.saveInBackground { (success, error) in
+        profile.saveInBackground { (success, error) in
             if success {
                 self.dismiss(animated: true, completion: nil)
                 print("saved")
@@ -56,6 +89,7 @@ class CameraViewController: UIViewController, UIImagePickerControllerDelegate, U
             picker.sourceType = .photoLibrary
         }
         present(picker, animated: true, completion: nil)
+        
     }
     
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
